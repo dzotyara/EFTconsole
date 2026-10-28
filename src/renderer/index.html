@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:">
+  <title>EFTconsole</title>
+  <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header id="titlebar">
+      <div class="brand">
+        <span class="brand-mark">EFT</span>
+        <span class="brand-name">CONSOLE</span>
+      </div>
+      <nav id="tabs"></nav>
+      <button id="new-tab" class="tb-btn" title="New tab">+</button>
+      <div class="drag-spacer"></div>
+      <button id="settings" class="tb-btn" title="Open config">&#9881;</button>
+      <div id="window-controls">
+        <button data-action="minimize" title="Minimize"><svg viewBox="0 0 10 10"><path d="M1 5.5h8"/></svg></button>
+        <button data-action="maximize" title="Maximize"><svg viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7"/></svg></button>
+        <button data-action="close" class="close" title="Close"><svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button>
+      </div>
+    </header>
+
+    <main id="stage">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div id="terminals"></div>
+    </main>
+
+    <footer id="statusbar">
+      <div class="sb-group">
+        <span class="sb-label">PMC</span><span id="sb-callsign" class="sb-value"></span>
+        <span class="sb-sep"></span>
+        <span class="sb-label">LOCATION</span><span id="sb-location" class="sb-value"></span>
+        <span class="sb-sep"></span>
+        <span class="sb-label">SHELL</span><span id="sb-shell" class="sb-value">&mdash;</span>
+      </div>
+      <div class="sb-group sb-meters">
+        <span class="sb-label">CPU</span><span class="meter" id="m-cpu"></span><span id="v-cpu" class="sb-value num">0%</span>
+        <span class="sb-label">MEM</span><span class="meter" id="m-mem"></span><span id="v-mem" class="sb-value num">0%</span>
+      </div>
+      <div class="sb-group">
+        <span class="sb-label">IN RAID</span><span id="sb-raid" class="sb-value num">00:00:00</span>
+        <span class="sb-sep"></span>
+        <span id="sb-clock" class="sb-value num"></span>
+      </div>
+    </footer>
+  </div>
+
+  <div id="fx-noise"></div>
+  <div id="fx-scanlines"></div>
+
+  <div id="boot" hidden>
+    <div class="boot-inner">
+      <div class="boot-title">EFT<span>CONSOLE</span></div>
+      <div class="boot-stage" id="boot-stage">ESTABLISHING CONNECTION</div>
+      <div class="boot-bar"><div id="boot-progress"></div></div>
+      <div class="boot-deploy">DEPLOYING IN: <span id="boot-timer">00:03.00</span></div>
+    </div>
+    <div class="boot-hint">PRESS ANY KEY TO SKIP</div>
+  </div>
+
+  <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="../../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

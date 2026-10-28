@@ -1,0 +1,79 @@
+{
+  "name": "eftconsole",
+  "productName": "EFTconsole",
+  "version": "0.1.0",
+  "description": "Escape from Tarkov styled terminal for macOS and Windows (fan-made)",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "node scripts/postinstall.js",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.github.dzotyara.eftconsole",
+    "productName": "EFTconsole",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dzotyara/EFTconsole.git"
+  },
+  "homepage": "https://github.com/dzotyara/EFTconsole",
+  "allowScripts": {
+    "node-pty": false,
+    "electron-winstaller": false
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
