@@ -63,13 +63,9 @@ button {
   padding-left: 10px;
   background: linear-gradient(var(--panel-2), var(--panel));
   border-bottom: 1px solid var(--line);
-  -webkit-app-region: drag;
 }
 
 body.mac #titlebar { padding-left: 84px; }
-
-#titlebar button,
-#tabs { -webkit-app-region: no-drag; }
 
 .brand {
   display: flex;
@@ -235,6 +231,7 @@ body.mac #window-controls { display: none; }
   gap: 10px;
   text-align: center;
   background: rgba(10, 11, 9, 0.82);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -346,7 +343,6 @@ body.no-scanlines #fx-scanlines {
   place-items: center;
   background: radial-gradient(ellipse at center, #15160f 0%, var(--bg) 70%);
   transition: opacity 0.35s ease;
-  -webkit-app-region: drag;
 }
 
 #boot.fade { opacity: 0; }

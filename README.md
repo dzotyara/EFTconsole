@@ -1,10 +1,11 @@
-<p align="center"><img src="build/icon.png" width="128" alt="EFTconsole logo"></p>
+<p align="center"><img src="src-tauri/icons/128x128@2x.png" width="128" alt="EFTconsole logo"></p>
 
 # EFTconsole
 
 A terminal for macOS and Windows dressed up in an *Escape from Tarkov*-inspired
 interface: khaki-on-black palette, tactical tab bar, film grain and scanlines,
-a "deploying" boot screen, CPU/MEM health bars and a raid timer.
+a "deploying" boot screen, CPU/MEM health bars and a raid timer. Built with
+[Tauri](https://tauri.app), so the installer is about 3 MB.
 
 ![EFTconsole screenshot](docs/screenshot.png)
 
@@ -13,14 +14,15 @@ a "deploying" boot screen, CPU/MEM health bars and a raid timer.
 
 ## Features
 
-- Real shell via [node-pty](https://github.com/microsoft/node-pty) + [xterm.js](https://xtermjs.org):
+- Real shell via [portable-pty](https://crates.io/crates/portable-pty) + [xterm.js](https://xtermjs.org):
   zsh/bash on macOS, PowerShell 7 (`pwsh`) or Windows PowerShell on Windows
 - Tabs, clickable links, truecolor, 10k-line scrollback
 - Status bar: PMC callsign, location (hostname), shell, CPU/MEM meters, time in raid, clock
 - Raid-end screens when a shell ends: **SURVIVED** (exit code 0), **KILLED IN ACTION**
   (non-zero exit code), and **KILLED · HEAD, EYES** when the shell process is killed from
   outside (a signal on macOS; `taskkill /F`, Task Manager or `Stop-Process` on Windows, which
-  also covers an explicit `exit 1`). `Enter` redeploys, `Esc` closes the tab
+  also covers an explicit `exit 1`). `Enter` redeploys, `Esc` closes the tab.
+  To see it: `kill -9 $$` (macOS) or `Stop-Process -Id $PID` (PowerShell)
 - Config file at `~/.eftconsole.json`
 
 ## Install
@@ -34,25 +36,36 @@ Builds are not code-signed. On macOS, if Gatekeeper says the app is damaged:
 xattr -cr /Applications/EFTconsole.app
 ```
 
-On Windows, SmartScreen may warn on first launch: *More info → Run anyway*.
+On Windows, SmartScreen may warn on first launch: *More info → Run anyway*. The app uses
+the system WebView2 (built into Windows 11); on older Windows 10 the installer downloads it.
 
 ## Run from source
 
-Requires Node.js 22.12+.
+Requires Node.js 18+, [Rust](https://rustup.rs) and the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS
+(Xcode Command Line Tools on macOS, MSVC Build Tools on Windows).
 
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
-Build installers locally:
+Build the installer (`src-tauri/target/release/bundle/`):
 
 ```bash
-npm run dist:mac   # dist/EFTconsole-<version>-mac-<arch>.dmg
-npm run dist:win   # dist/EFTconsole-<version>-win-x64.exe
+npm run build
 ```
 
-Pushing a `v*` tag makes GitHub Actions build both platforms and attach them to a release.
+End-to-end QA: the app drives its own UI with real shells (`src/renderer/qa.js`), then checks
+that no shell processes are left behind:
+
+```bash
+npx tauri build --no-bundle
+npm run qa
+```
+
+Pushing a `v*` tag makes GitHub Actions build and QA both platforms and attach the installers
+to a release.
 
 ## Shortcuts
 

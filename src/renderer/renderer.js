@@ -63,7 +63,7 @@ async function createTab() {
   });
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
-  term.loadAddon(new WebLinksAddon.WebLinksAddon((_e, url) => window.open(url)));
+  term.loadAddon(new WebLinksAddon.WebLinksAddon((_e, url) => window.eft.openExternal(url)));
   term.open(pane);
 
   const tabEl = document.createElement('div');
@@ -424,6 +424,12 @@ async function init() {
   await createTab();
   await booting;
   active?.term.focus();
+
+  if (config.qa) {
+    const qa = document.createElement('script');
+    qa.src = 'qa.js';
+    document.body.appendChild(qa);
+  }
 }
 
 init();

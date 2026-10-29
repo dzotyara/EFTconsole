@@ -11,12 +11,21 @@ permissions:
   contents: write
 
 jobs:
-  qa:
-    timeout-minutes: 20
+  build:
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            qa: true
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            qa: false # cross-compiled; QA runs on the native arm64 build
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            qa: true
     runs-on: ${{ matrix.os }}
     env:
       QA_OUT: ${{ github.workspace }}/qa-out
@@ -28,71 +37,42 @@ jobs:
           node-version: 22
           cache: npm
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
       - run: npm ci
 
-      # Synthesized-input UI tests are timing sensitive on shared runners: one retry.
-      - name: QA (native)
-        if: runner.os != 'Windows'
-        run: npm run qa || npm run qa
+      - name: Build
+        run: npx tauri build --target ${{ matrix.target }}
 
-      - name: QA (native, Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          ELECTRON_ENABLE_LOGGING: '1'
-          ELECTRON_ENABLE_STACK_DUMPING: '1'
+      # UI tests are timing sensitive on shared runners: one retry.
+      - name: QA
+        if: matrix.qa
+        shell: bash
         run: |
-          foreach ($attempt in 1, 2) {
-            npm run qa
-            $code = $LASTEXITCODE
-            Write-Host "--- qa.log (attempt $attempt, exit $code) ---"
-            Get-Content qa-out/qa.log -ErrorAction SilentlyContinue
-            if ($code -eq 0) { exit 0 }
-          }
-          exit 1
-
-      - name: QA (Windows code paths, simulated)
-        if: runner.os == 'macOS'
-        run: npm run qa:win-sim || npm run qa:win-sim
+          BIN=src-tauri/target/${{ matrix.target }}/release/eftconsole
+          [ "$RUNNER_OS" = Windows ] && BIN="$BIN.exe"
+          node scripts/qa.js "$BIN" || node scripts/qa.js "$BIN"
 
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && matrix.qa
         with:
-          name: qa-screenshots-${{ runner.os }}
-          path: |
-            qa-out/*.png
-            qa-out/qa.log
+          name: qa-log-${{ matrix.target }}
+          path: qa-out/qa.log
           if-no-files-found: ignore
 
-  build:
-    needs: qa
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Package
-        run: npx electron-builder --publish never
-        env:
-          # No signing certificates: build unsigned binaries.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
       - uses: actions/upload-artifact@v4
         with:
-          name: EFTconsole-${{ runner.os }}
+          name: EFTconsole-${{ matrix.target }}
           path: |
-            dist/*.dmg
-            dist/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
           if-no-files-found: error
 
       - name: Attach to GitHub release
@@ -100,5 +80,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*.dmg
-            dist/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
