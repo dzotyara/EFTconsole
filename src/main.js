@@ -239,7 +239,10 @@ function openConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2) + '\n');
   }
-  shell.openPath(CONFIG_PATH);
+  shell.openPath(CONFIG_PATH).then((err) => {
+    // Windows has no default app for .json out of the box.
+    if (err && isWin) execFile('notepad.exe', [CONFIG_PATH]);
+  });
 }
 
 app.whenReady().then(() => {

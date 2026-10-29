@@ -21,6 +21,9 @@
 
 * { box-sizing: border-box; }
 
+/* Author `display` rules (e.g. #boot's grid) would otherwise override [hidden]. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   height: 100%;
@@ -154,7 +157,8 @@ body.mac #titlebar { padding-left: 84px; }
 .tb-btn:hover { color: var(--text-bright); border-color: var(--line-strong); }
 #settings { font-size: 15px; margin-right: 6px; }
 
-.drag-spacer { flex: 1; }
+/* keep somewhere to grab the window even with many tabs open */
+.drag-spacer { flex: 1 0 48px; }
 
 #window-controls { display: flex; }
 body.mac #window-controls { display: none; }

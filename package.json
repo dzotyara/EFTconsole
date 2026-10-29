@@ -1,7 +1,7 @@
 {
   "name": "eftconsole",
   "productName": "EFTconsole",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Escape from Tarkov styled terminal for macOS and Windows (fan-made)",
   "main": "src/main.js",
   "license": "MIT",
@@ -10,7 +10,9 @@
     "postinstall": "node scripts/postinstall.js",
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win",
+    "qa": "electron test/qa.js",
+    "qa:win-sim": "QA_SIMULATE_WIN=1 electron test/qa.js"
   },
   "build": {
     "appId": "com.github.dzotyara.eftconsole",

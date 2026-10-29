@@ -90,7 +90,8 @@ async function createTab() {
     tab.title = title;
     renderTabs();
   });
-  term.attachCustomKeyEventHandler((e) => handleKey(e, tab));
+  // A dead tab swallows input until it is redeployed or closed.
+  term.attachCustomKeyEventHandler(() => !tab.dead);
 
   pane.addEventListener('contextmenu', async (e) => {
     e.preventDefault();
@@ -235,27 +236,34 @@ function shortcutFor(e) {
   return null;
 }
 
-function handleKey(e, tab) {
-  if (tab.dead) {
-    if (e.type === 'keydown' && e.key === 'Enter') redeploy(tab);
-    if (e.type === 'keydown' && e.key === 'Escape') closeTab(tab);
-    return false;
+// Listens on window (capture phase) so shortcuts work no matter what has focus,
+// and handled keys never reach xterm.
+function onKeyDown(e) {
+  if (!active) return;
+  const consume = () => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  if (active.dead) {
+    if (e.key === 'Enter') redeploy(active);
+    else if (e.key === 'Escape') closeTab(active);
+    if (e.key === 'Enter' || e.key === 'Escape') return consume();
   }
 
   // Cmd/Ctrl+1..9 jump to tab
-  if (e.type === 'keydown' && (isMac ? e.metaKey : e.ctrlKey) && /^[1-9]$/.test(e.key)) {
+  if ((isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
     const target = tabs[Number(e.key) - 1];
     if (target) activate(target);
-    return false;
+    return consume();
   }
 
   const cmd = shortcutFor(e);
-  if (!cmd) return true;
-  e.preventDefault();
+  if (!cmd) return;
+  consume();
   if (cmd === 'devtools') window.eft.toggleDevTools();
   else commands[cmd]();
-  if (cmd === 'edit:copy') active.term.clearSelection();
-  return false;
+  if (cmd === 'edit:copy') active?.term.clearSelection();
 }
 
 /* ---------- status bar ---------- */
@@ -330,6 +338,8 @@ function boot() {
       else setTimeout(finish, 150);
     };
     requestAnimationFrame(frame);
+    // rAF is paused while the window is occluded; never leave the overlay up.
+    setTimeout(finish, duration + 600);
     window.addEventListener('keydown', finish, true);
     el.addEventListener('mousedown', finish);
   });
@@ -360,7 +370,13 @@ async function init() {
     setMeter('cpu', cpu);
     setMeter('mem', mem);
   });
-  for (const [channel, fn] of Object.entries(commands)) window.eft.onCommand(channel, fn);
+  // Discard return values: whatever a callback returns is cloned back across the
+  // context bridge, and tabs (DOM nodes, terminals) can't be cloned.
+  for (const [channel, fn] of Object.entries(commands)) {
+    window.eft.onCommand(channel, () => {
+      fn();
+    });
+  }
 
   $('#new-tab').addEventListener('click', () => createTab());
   $('#settings').addEventListener('click', () => window.eft.openConfig());
@@ -369,6 +385,12 @@ async function init() {
     if (action === 'minimize') window.eft.minimize();
     if (action === 'maximize') window.eft.toggleMaximize();
     if (action === 'close') window.eft.close();
+  });
+
+  window.addEventListener('keydown', onKeyDown, true);
+  // Clicking chrome (tabs, buttons, status bar) must not pull focus out of the terminal.
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.xterm')) e.preventDefault();
   });
 
   new ResizeObserver(() => active?.fit.fit()).observe($('#terminals'));
