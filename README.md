@@ -1,3 +1,5 @@
+<p align="center"><img src="build/icon.png" width="128" alt="EFTconsole logo"></p>
+
 # EFTconsole
 
 A terminal for macOS and Windows dressed up in an *Escape from Tarkov*-inspired
@@ -15,8 +17,10 @@ a "deploying" boot screen, CPU/MEM health bars and a raid timer.
   zsh/bash on macOS, PowerShell 7 (`pwsh`) or Windows PowerShell on Windows
 - Tabs, clickable links, truecolor, 10k-line scrollback
 - Status bar: PMC callsign, location (hostname), shell, CPU/MEM meters, time in raid, clock
-- Shell exit screen: **SURVIVED** on exit code 0, **KILLED IN ACTION** otherwise —
-  `Enter` to redeploy, `Esc` to close the tab
+- Raid-end screens when a shell ends: **SURVIVED** (exit code 0), **KILLED IN ACTION**
+  (non-zero exit code), and **KILLED · HEAD, EYES** when the shell process is killed from
+  outside (a signal on macOS; `taskkill /F`, Task Manager or `Stop-Process` on Windows, which
+  also covers an explicit `exit 1`). `Enter` redeploys, `Esc` closes the tab
 - Config file at `~/.eftconsole.json`
 
 ## Install
@@ -68,7 +72,8 @@ Right click copies the selection, or pastes when nothing is selected.
 ## Config
 
 Click the gear in the title bar (or *Shell → Open Config* on macOS) to create and open
-`~/.eftconsole.json`. Every key is optional; restart the app to apply changes.
+`~/.eftconsole.json` (override the location with the `EFTCONSOLE_CONFIG` environment variable).
+Every key is optional; restart the app to apply changes.
 
 ```json
 {
@@ -100,7 +105,7 @@ and falls back to Bahnschrift (Windows) or DIN Condensed (macOS).
 - Установщики — во вкладке [Releases](https://github.com/dzotyara/EFTconsole/releases)
 - Из исходников: `npm install`, затем `npm start` (нужен Node.js 22.12+)
 - Настройки — шестерёнка в заголовке окна, файл `~/.eftconsole.json`
-- Шелл завершился с кодом 0 — **SURVIVED**, иначе **KILLED IN ACTION**; `Enter` — заново, `Esc` — закрыть вкладку
+- Шелл завершился с кодом 0 — **SURVIVED**, с другим кодом — **KILLED IN ACTION**, процесс убили — **KILLED · HEAD, EYES**; `Enter` — заново, `Esc` — закрыть вкладку
 
 ## License
 

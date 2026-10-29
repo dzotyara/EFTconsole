@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22241b"/>
+      <stop offset="1" stop-color="#0c0d0a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#d2cba9" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#d2cba9" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="3" fill="#000" opacity="0.22"/>
+    </pattern>
+    <clipPath id="clip"><rect x="100" y="100" width="824" height="824" rx="184"/></clipPath>
+  </defs>
+
+  <!-- plate -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#plate)"/>
+  <g clip-path="url(#clip)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#scan)"/>
+  </g>
+  <rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#4b4b3d" stroke-width="6"/>
+
+  <!-- corner brackets -->
+  <g fill="none" stroke="#d2cba9" stroke-width="30" stroke-linecap="square">
+    <path d="M232 340 V232 H340"/>
+    <path d="M684 232 H792 V340"/>
+    <path d="M792 684 V792 H684"/>
+    <path d="M340 792 H232 V684"/>
+  </g>
+
+  <!-- reticle ticks -->
+  <g stroke="#7c7966" stroke-width="14" stroke-linecap="square">
+    <path d="M512 196 V236"/>
+    <path d="M512 788 V828"/>
+    <path d="M196 512 H236"/>
+    <path d="M788 512 H828"/>
+  </g>
+
+  <!-- prompt -->
+  <path d="M330 400 L470 512 L330 624" fill="none" stroke="#d2cba9" stroke-width="58" stroke-linecap="square" stroke-linejoin="miter"/>
+  <rect x="520" y="566" width="184" height="58" fill="#c9a54a"/>
+</svg>

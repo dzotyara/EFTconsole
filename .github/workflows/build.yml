@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   qa:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +32,24 @@ jobs:
 
       # Synthesized-input UI tests are timing sensitive on shared runners: one retry.
       - name: QA (native)
+        if: runner.os != 'Windows'
         run: npm run qa || npm run qa
+
+      - name: QA (native, Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ELECTRON_ENABLE_LOGGING: '1'
+          ELECTRON_ENABLE_STACK_DUMPING: '1'
+        run: |
+          foreach ($attempt in 1, 2) {
+            npm run qa
+            $code = $LASTEXITCODE
+            Write-Host "--- qa.log (attempt $attempt, exit $code) ---"
+            Get-Content qa-out/qa.log -ErrorAction SilentlyContinue
+            if ($code -eq 0) { exit 0 }
+          }
+          exit 1
 
       - name: QA (Windows code paths, simulated)
         if: runner.os == 'macOS'
@@ -41,7 +59,9 @@ jobs:
         if: always()
         with:
           name: qa-screenshots-${{ runner.os }}
-          path: qa-out/*.png
+          path: |
+            qa-out/*.png
+            qa-out/qa.log
           if-no-files-found: ignore
 
   build:

@@ -17,6 +17,17 @@ const MODE = REAL_WIN || SIMULATE_WIN ? 'win' : 'mac';
 const OUT = process.env.QA_OUT || path.join(os.tmpdir(), 'eftconsole-qa');
 fs.mkdirSync(OUT, { recursive: true });
 
+// Windows CI doesn't reliably surface Electron's stdout, so mirror it to a file.
+const LOG = path.join(OUT, 'qa.log');
+fs.writeFileSync(LOG, '');
+const log = console.log;
+console.log = (...args) => {
+  log(...args);
+  fs.appendFileSync(LOG, args.join(' ') + '\n');
+};
+process.on('uncaughtException', (e) => console.log('UNCAUGHT', e.stack));
+console.log(`qa start: platform=${process.platform} electron=${process.versions.electron}`);
+
 const { app, clipboard, shell, Menu } = require('electron');
 
 // Shell-specific commands used by the checks.
@@ -35,11 +46,11 @@ const SH = REAL_WIN
       sizeRe: (rows, cols) => new RegExp(`\\n${rows} ${cols}`),
     };
 
-// Isolated home with a config pinning the shell, so user rc files can't interfere.
-const home = fs.mkdtempSync(path.join(OUT, `home-${MODE}-`));
-fs.writeFileSync(path.join(home, '.eftconsole.json'), JSON.stringify({ shell: SH.shell, shellArgs: SH.args }));
-process.env.HOME = home;
-process.env.USERPROFILE = home;
+// Temp config pinning the shell, so user rc files can't interfere. (Don't touch
+// HOME/USERPROFILE: Chromium on Windows crashes at startup if they change.)
+const home = fs.mkdtempSync(path.join(OUT, `cfg-${MODE}-`));
+process.env.EFTCONSOLE_CONFIG = path.join(home, '.eftconsole.json');
+fs.writeFileSync(process.env.EFTCONSOLE_CONFIG, JSON.stringify({ shell: SH.shell, shellArgs: SH.args }));
 
 if (SIMULATE_WIN) {
   // Load node-pty with the real platform first, then make the app code think it's on Windows.
@@ -64,6 +75,45 @@ const check = (name, ok, detail = '') => {
 process.on('uncaughtException', (e) => errors.push('main: ' + e.stack));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Shells (and their console hosts) still parented under this process.
+function shellProcesses() {
+  const { execFileSync } = require('child_process');
+  let procs;
+  if (REAL_WIN) {
+    const out = execFileSync('powershell.exe', ['-NoProfile', '-Command',
+      'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name | ConvertTo-Json -Compress']).toString();
+    procs = JSON.parse(out).map((p) => ({ pid: p.ProcessId, ppid: p.ParentProcessId, name: p.Name }));
+  } else {
+    procs = execFileSync('ps', ['-axo', 'pid=,ppid=,comm=']).toString().trim().split('\n').map((l) => {
+      const [pid, ppid, ...rest] = l.trim().split(/\s+/);
+      return { pid: Number(pid), ppid: Number(ppid), name: path.basename(rest.join(' ')) };
+    });
+  }
+  const found = [];
+  const walk = (pid) => {
+    for (const p of procs) {
+      if (p.ppid !== pid || /^(powershell|ps)(\.exe)?$/i.test(p.name)) continue;
+      if (/^(cmd|conhost|openconsole|ping|-?zsh|-?bash)(\.exe)?$/i.test(p.name)) found.push(p);
+      walk(p.pid);
+    }
+  };
+  walk(process.pid);
+  return found;
+}
+
+function killAll(list) {
+  for (const p of list) {
+    try { process.kill(p.pid); } catch {}
+  }
+}
+
+// Never hang CI: bail out if the run takes far longer than it should.
+setTimeout(() => {
+  console.log('FAIL  watchdog: QA did not finish in 4 minutes');
+  killAll(shellProcesses());
+  app.exit(1);
+}, 4 * 60 * 1000).unref();
 
 async function run(win) {
   const wc = win.webContents;
@@ -168,6 +218,7 @@ async function run(win) {
 
   // ---- typing ----
   await waitFor(async () => (await buffer()).trim().length > 0);
+  await click(await center('#terminals'));
   await run('echo qa-42');
   check('typing + enter runs command', await waitFor(async () => /\nqa-42/.test(await buffer())));
 
@@ -314,6 +365,18 @@ async function run(win) {
   check('Enter redeploys a dead tab', redeployed);
   await run('echo back-99');
   check('redeployed shell works', await waitFor(async () => /\nback-99/.test(await buffer())));
+
+  // Killing the shell process from outside -> KILLED / HEAD, EYES
+  process.kill(await js(`return active.pid`), 'SIGKILL');
+  check('killed shell shows KILLED / HEAD, EYES', await waitFor(() => js(`
+    const el = active.pane.querySelector('.raid-end.killed');
+    return !!el && el.innerText.includes('KILLED') && el.innerText.includes('HEAD, EYES');`)));
+  await shot('02b-killed');
+  await enter();
+  await sleep(800);
+  check('Enter redeploys a killed tab', await js(`return !active.dead && !active.pane.querySelector('.raid-end')`));
+  await run('echo alive-11');
+  check('shell works after kill + redeploy', await waitFor(async () => /\nalive-11/.test(await buffer())));
   await run('exit');
   check('exit 0 shows SURVIVED', await waitFor(() => js(`return !!active.pane.querySelector('.raid-end:not(.kia)')`)));
   const before = (await state()).n;
@@ -361,6 +424,11 @@ async function run(win) {
   else { while (!win.isDestroyed() && (await state()).n > 0) await shortcut('tab:close'); }
   const didClose = await Promise.race([closed.then(() => true), sleep(3000).then(() => false)]);
   check(MODE === 'win' ? 'close button closes window' : 'closing last tab closes window', didClose);
+
+  await sleep(1500);
+  const leftovers = shellProcesses();
+  check('no shell processes left after closing', leftovers.length === 0, JSON.stringify(leftovers));
+  killAll(leftovers);
 }
 
 app.on('browser-window-created', (_e, win) => {

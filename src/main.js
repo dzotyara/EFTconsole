@@ -10,8 +10,8 @@ const { execFile } = require('child_process');
 const isMac = process.platform === 'darwin';
 const isWin = process.platform === 'win32';
 
-// User config lives in ~/.eftconsole.json; every key is optional.
-const CONFIG_PATH = path.join(os.homedir(), '.eftconsole.json');
+// User config lives in ~/.eftconsole.json (or $EFTCONSOLE_CONFIG); every key is optional.
+const CONFIG_PATH = process.env.EFTCONSOLE_CONFIG || path.join(os.homedir(), '.eftconsole.json');
 const DEFAULT_CONFIG = {
   shell: null, // null = auto-detect
   shellArgs: null,
@@ -55,6 +55,17 @@ function resolveShell(config) {
 
 const config = loadConfig();
 const terminals = new Map();
+
+const SIGNAL_NAMES = Object.fromEntries(Object.entries(os.constants.signals).map(([name, num]) => [num, name]));
+// Windows has no signals; these are the exit codes a process gets when it is
+// terminated from outside (taskkill /F, Task Manager, Stop-Process, Ctrl+Break).
+const WIN_KILL_CODES = new Set([1, -1, 0xffffffff, 0xc000013a]);
+
+function describeExit(exitCode, signal) {
+  if (signal) return { exitCode, killed: true, cause: SIGNAL_NAMES[signal] || `signal ${signal}` };
+  if (isWin && WIN_KILL_CODES.has(exitCode)) return { exitCode, killed: true, cause: 'terminated' };
+  return { exitCode, killed: false };
+}
 let nextId = 1;
 let win = null;
 
@@ -114,13 +125,56 @@ ipcMain.handle('pty:spawn', (_e, { cols, rows }) => {
   terminals.set(id, term);
 
   term.onData((data) => win && win.webContents.send('pty:data', id, data));
-  term.onExit(({ exitCode }) => {
+  term.onExit(({ exitCode, signal }) => {
     terminals.delete(id);
-    if (win) win.webContents.send('pty:exit', id, exitCode);
+    if (isWin) setTimeout(reapOrphanConhosts, 500);
+    if (win) win.webContents.send('pty:exit', id, describeExit(exitCode, signal));
   });
 
-  return { id, shell: path.basename(file).replace(/\.exe$/i, '') };
+  return { id, pid: term.pid, shell: path.basename(file).replace(/\.exe$/i, '') };
 });
+
+// node-pty 1.1 never closes the pseudoconsole of a shell that exits on its own,
+// so its conhost.exe (a direct child of this process) lives on forever. Pair
+// every live shell with the conhost created right before it; whatever is left
+// over belongs to a dead shell. Fresh conhosts are skipped: their shell may
+// still be starting.
+const FILETIME_EPOCH_OFFSET_MS = 11644473600000;
+function reapOrphanConhosts() {
+  const script =
+    `Get-CimInstance Win32_Process -Filter "ParentProcessId=${process.pid}" | ` +
+    `Select-Object ProcessId,Name,@{n='t';e={$_.CreationDate.ToFileTimeUtc()}} | ConvertTo-Json -Compress`;
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true }, (err, out) => {
+    if (err || !out.trim()) return;
+    let procs = JSON.parse(out);
+    if (!Array.isArray(procs)) procs = [procs];
+    const byTime = (a, b) => a.t - b.t;
+    const livePids = new Set([...terminals.values()].map((t) => t.pid));
+    const shells = procs.filter((p) => livePids.has(p.ProcessId)).sort(byTime);
+    const hosts = procs.filter((p) => /^conhost\.exe$/i.test(p.Name)).sort(byTime);
+
+    const owned = new Set();
+    for (const sh of shells) {
+      const host = hosts.filter((h) => h.t <= sh.t && !owned.has(h.ProcessId)).pop();
+      if (host) owned.add(host.ProcessId);
+    }
+    const cutoff = (Date.now() - 3000 + FILETIME_EPOCH_OFFSET_MS) * 10000;
+    let retry = false;
+    for (const h of hosts) {
+      if (owned.has(h.ProcessId)) continue;
+      if (h.t > cutoff) {
+        retry = true;
+        continue;
+      }
+      try {
+        process.kill(h.ProcessId);
+      } catch {
+        // already gone
+      }
+    }
+    if (retry) setTimeout(reapOrphanConhosts, 3500);
+  });
+}
 
 ipcMain.on('pty:write', (_e, id, data) => terminals.get(id)?.write(data));
 ipcMain.on('pty:resize', (_e, id, cols, rows) => {

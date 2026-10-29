@@ -111,8 +111,9 @@ async function createTab() {
 
 async function spawnShell(tab) {
   tab.fit.fit();
-  const { id, shell } = await window.eft.spawn(tab.term.cols, tab.term.rows);
+  const { id, pid, shell } = await window.eft.spawn(tab.term.cols, tab.term.rows);
   tab.ptyId = id;
+  tab.pid = pid;
   tab.shell = shell;
   tab.dead = false;
   byPty.set(id, tab);
@@ -171,17 +172,40 @@ function renderTabs() {
 
 /* ---------- raid end (shell exited) ---------- */
 
-function showRaidEnd(tab, exitCode) {
+// Health-screen silhouette with the head marked as the fatal hit.
+const WOUND_SVG = `<svg viewBox="0 0 34 68" aria-hidden="true">
+  <circle class="hit" cx="17" cy="7" r="6"/>
+  <rect class="part" x="10" y="15" width="14" height="13" rx="2"/>
+  <rect class="part" x="11" y="29" width="12" height="9" rx="2"/>
+  <rect class="part" x="3" y="15" width="6" height="22" rx="3"/>
+  <rect class="part" x="25" y="15" width="6" height="22" rx="3"/>
+  <rect class="part" x="10" y="39" width="6" height="28" rx="3"/>
+  <rect class="part" x="18" y="39" width="6" height="28" rx="3"/>
+</svg>`;
+
+function showRaidEnd(tab, { exitCode, killed, cause }) {
   tab.dead = true;
   renderTabs();
 
-  const survived = exitCode === 0;
   const el = document.createElement('div');
-  el.className = 'raid-end' + (survived ? '' : ' kia');
-  el.innerHTML = `
-    <div class="status">${survived ? 'Survived' : 'Killed in action'}</div>
-    <div class="detail">${tab.shell} exited with code ${exitCode}</div>
-    <div class="hint">Enter &mdash; redeploy &nbsp;&middot;&nbsp; Esc &mdash; close tab</div>`;
+  if (killed) {
+    el.className = 'raid-end killed';
+    el.innerHTML = `
+      <div class="status">KILLED</div>
+      <div class="wound">${WOUND_SVG}<span>HEAD, EYES</span></div>
+      <div class="detail">${tab.shell} &middot; ${cause}</div>`;
+  } else if (exitCode === 0) {
+    el.className = 'raid-end';
+    el.innerHTML = `
+      <div class="status">Survived</div>
+      <div class="detail">${tab.shell} exited with code 0</div>`;
+  } else {
+    el.className = 'raid-end kia';
+    el.innerHTML = `
+      <div class="status">Killed in action</div>
+      <div class="detail">${tab.shell} exited with code ${exitCode}</div>`;
+  }
+  el.insertAdjacentHTML('beforeend', '<div class="hint">Enter &mdash; redeploy &nbsp;&middot;&nbsp; Esc &mdash; close tab</div>');
   tab.pane.appendChild(el);
   tab.raidEnd = el;
 }
@@ -361,10 +385,10 @@ async function init() {
   startClocks();
 
   window.eft.onData((id, data) => byPty.get(id)?.term.write(data));
-  window.eft.onExit((id, code) => {
+  window.eft.onExit((id, info) => {
     const tab = byPty.get(id);
     byPty.delete(id);
-    if (tab) showRaidEnd(tab, code);
+    if (tab) showRaidEnd(tab, info);
   });
   window.eft.onStats(({ cpu, mem }) => {
     setMeter('cpu', cpu);
