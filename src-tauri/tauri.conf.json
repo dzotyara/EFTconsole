@@ -19,6 +19,12 @@
     "active": true,
     "targets": "all",
     "category": "DeveloperTool",
+    "publisher": "dzotyara",
+    "homepage": "https://github.com/dzotyara/EFTconsole",
+    "copyright": "MIT License, dzotyara",
+    "license": "MIT",
+    "shortDescription": "Escape from Tarkov styled terminal (fan-made)",
+    "longDescription": "A real terminal (zsh, bash or PowerShell) dressed in an Escape from Tarkov-inspired interface: tabs, a tactical status bar and raid-end screens when a shell exits. Fan-made, not affiliated with Battlestate Games.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

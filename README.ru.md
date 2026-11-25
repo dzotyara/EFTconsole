@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>EFTconsole — настоящий терминал в интерфейсе по мотивам <i>Escape from Tarkov</i>.</b><br>
-  Внутри zsh, bash или PowerShell, снаружи тактический HUD. macOS, Windows и Linux, около 3 МБ.
+  Внутри zsh, bash или PowerShell, снаружи тактический HUD. macOS, Windows и Linux, установщик на 3 МБ.
 </p>
 
 <p align="center">
@@ -77,20 +77,22 @@
 
 Установщик для вашей системы — в [**Releases**](https://github.com/dzotyara/EFTconsole/releases/latest).
 
-| Система | Файл | Установка |
-|---|---|---|
-| macOS, Apple Silicon | `EFTconsole_<версия>_aarch64.dmg` | открыть и перетащить в «Программы» |
-| macOS, Intel | `EFTconsole_<версия>_x64.dmg` | открыть и перетащить в «Программы» |
-| Windows 10/11 | `EFTconsole_<версия>_x64-setup.exe` | запустить установщик |
-| Debian, Ubuntu, Mint | `EFTconsole_<версия>_amd64.deb` / `_arm64.deb` | `sudo apt install ./EFTconsole_*.deb` |
-| Fedora, openSUSE | `EFTconsole-<версия>-1.x86_64.rpm` / `.aarch64.rpm` | `sudo dnf install ./EFTconsole-*.rpm` |
-| Любой Linux | `EFTconsole_<версия>_amd64.AppImage` / `_aarch64.AppImage` | `chmod +x EFTconsole_*.AppImage` и запустить |
+| Система | Файл | Размер | Установка |
+|---|---|---|---|
+| macOS, Apple Silicon | `EFTconsole_<версия>_aarch64.dmg` | ~3 МБ | открыть и перетащить в «Программы» |
+| macOS, Intel | `EFTconsole_<версия>_x64.dmg` | ~3 МБ | открыть и перетащить в «Программы» |
+| Windows 10/11 | `EFTconsole_<версия>_x64-setup.exe` | ~1,5 МБ | запустить установщик |
+| Debian, Ubuntu, Mint | `EFTconsole_<версия>_amd64.deb` / `_arm64.deb` | ~2,5 МБ | `sudo apt install ./EFTconsole_*.deb` |
+| Fedora, openSUSE | `EFTconsole-<версия>-1.x86_64.rpm` / `.aarch64.rpm` | ~2,5 МБ | `sudo dnf install ./EFTconsole-*.rpm` |
+| Любой Linux | `EFTconsole_<версия>_amd64.AppImage` / `_aarch64.AppImage` | ~80 МБ | `chmod +x EFTconsole_*.AppImage` и запустить |
+
+AppImage тяжелее, потому что несёт WebKitGTK внутри; `.deb` и `.rpm` берут системный.
 
 Сборки не подписаны.
 
 - **macOS:** если Gatekeeper пишет, что приложение повреждено, выполните `xattr -cr /Applications/EFTconsole.app`.
 - **Windows:** при первом запуске SmartScreen может предупредить: *Подробнее → Выполнить в любом случае*. Приложение использует системный WebView2 (он есть в Windows 11); на старой Windows 10 установщик скачает его сам.
-- **Linux:** нужен WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`). `.deb` и `.rpm` ставят его сами; для AppImage поставьте его менеджером пакетов, если его нет.
+- **Linux:** `.deb` и `.rpm` требуют WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`) и ставят его сами. Пакет в Debian называется `ef-tconsole`: удалить можно через `sudo apt remove ef-tconsole`.
 
 ## Что умеет
 

@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>EFTconsole is a real terminal dressed in an <i>Escape from Tarkov</i>-inspired interface.</b><br>
-  zsh, bash or PowerShell inside, a tactical HUD outside. macOS, Windows and Linux, about 3 MB.
+  zsh, bash or PowerShell inside, a tactical HUD outside. macOS, Windows and Linux, a 3 MB installer.
 </p>
 
 <p align="center">
@@ -76,20 +76,22 @@ Want to see the raid-end screen? Run `kill -9 $$` (macOS, Linux) or `Stop-Proces
 
 Grab the installer for your system from [**Releases**](https://github.com/dzotyara/EFTconsole/releases/latest).
 
-| System | File | Install |
-|---|---|---|
-| macOS, Apple Silicon | `EFTconsole_<version>_aarch64.dmg` | open and drag to Applications |
-| macOS, Intel | `EFTconsole_<version>_x64.dmg` | open and drag to Applications |
-| Windows 10/11 | `EFTconsole_<version>_x64-setup.exe` | run the installer |
-| Debian, Ubuntu, Mint | `EFTconsole_<version>_amd64.deb` / `_arm64.deb` | `sudo apt install ./EFTconsole_*.deb` |
-| Fedora, openSUSE | `EFTconsole-<version>-1.x86_64.rpm` / `.aarch64.rpm` | `sudo dnf install ./EFTconsole-*.rpm` |
-| Any Linux | `EFTconsole_<version>_amd64.AppImage` / `_aarch64.AppImage` | `chmod +x EFTconsole_*.AppImage` and run it |
+| System | File | Size | Install |
+|---|---|---|---|
+| macOS, Apple Silicon | `EFTconsole_<version>_aarch64.dmg` | ~3 MB | open and drag to Applications |
+| macOS, Intel | `EFTconsole_<version>_x64.dmg` | ~3 MB | open and drag to Applications |
+| Windows 10/11 | `EFTconsole_<version>_x64-setup.exe` | ~1.5 MB | run the installer |
+| Debian, Ubuntu, Mint | `EFTconsole_<version>_amd64.deb` / `_arm64.deb` | ~2.5 MB | `sudo apt install ./EFTconsole_*.deb` |
+| Fedora, openSUSE | `EFTconsole-<version>-1.x86_64.rpm` / `.aarch64.rpm` | ~2.5 MB | `sudo dnf install ./EFTconsole-*.rpm` |
+| Any Linux | `EFTconsole_<version>_amd64.AppImage` / `_aarch64.AppImage` | ~80 MB | `chmod +x EFTconsole_*.AppImage` and run it |
+
+The AppImage is bigger because it carries WebKitGTK inside; the `.deb` and `.rpm` use the system one.
 
 Builds are not code-signed.
 
 - **macOS:** if Gatekeeper says the app is damaged, run `xattr -cr /Applications/EFTconsole.app`.
 - **Windows:** SmartScreen may warn on first launch: *More info → Run anyway*. The app uses the system WebView2 (built into Windows 11); on older Windows 10 the installer downloads it.
-- **Linux:** the app needs WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`). The `.deb` and `.rpm` pull it in; for the AppImage, install it with your package manager if it is missing.
+- **Linux:** the `.deb` and `.rpm` need WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`) and pull it in. The Debian package is called `ef-tconsole`: remove it with `sudo apt remove ef-tconsole`.
 
 ## Features
 
