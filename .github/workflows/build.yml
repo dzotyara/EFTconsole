@@ -26,6 +26,13 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             qa: true
+          # 22.04 keeps the glibc floor low so the AppImage runs on older distros.
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            qa: true
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            qa: false
     runs-on: ${{ matrix.os }}
     env:
       QA_OUT: ${{ github.workspace }}/qa-out
@@ -46,10 +53,24 @@ jobs:
           workspaces: src-tauri
           key: ${{ matrix.target }}
 
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libxdo-dev libssl-dev patchelf file rpm xvfb zsh
+
       - run: npm ci
 
       - name: Build
-        run: npx tauri build --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            macOS) BUNDLES=dmg ;;
+            Windows) BUNDLES=nsis ;;
+            Linux) BUNDLES=deb,rpm,appimage ;;
+          esac
+          npx tauri build --target ${{ matrix.target }} --bundles "$BUNDLES"
 
       # UI tests are timing sensitive on shared runners: one retry.
       - name: QA
@@ -58,7 +79,12 @@ jobs:
         run: |
           BIN=src-tauri/target/${{ matrix.target }}/release/eftconsole
           [ "$RUNNER_OS" = Windows ] && BIN="$BIN.exe"
-          node scripts/qa.js "$BIN" || node scripts/qa.js "$BIN"
+          RUN=""
+          if [ "$RUNNER_OS" = Linux ]; then
+            RUN="xvfb-run -a"
+            export WEBKIT_DISABLE_DMABUF_RENDERER=1 LIBGL_ALWAYS_SOFTWARE=1
+          fi
+          $RUN node scripts/qa.js "$BIN" || $RUN node scripts/qa.js "$BIN"
 
       - uses: actions/upload-artifact@v4
         if: always() && matrix.qa
@@ -73,6 +99,9 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
           if-no-files-found: error
 
       - name: Attach to GitHub release
@@ -82,3 +111,6 @@ jobs:
           files: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage

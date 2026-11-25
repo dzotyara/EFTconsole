@@ -1,8 +1,8 @@
 {
   "name": "eftconsole",
   "productName": "EFTconsole",
-  "version": "0.2.0",
-  "description": "Escape from Tarkov styled terminal for macOS and Windows (fan-made)",
+  "version": "0.3.0",
+  "description": "Escape from Tarkov styled terminal for macOS, Windows and Linux (fan-made)",
   "license": "MIT",
   "scripts": {
     "dev": "tauri dev",
