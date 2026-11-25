@@ -9,6 +9,8 @@
   const { invoke } = window.__TAURI__.core;
   const config = await window.eft.getConfig();
   const WIN = config.platform === 'win32';
+  // Windows and Linux share the frameless window, its controls and Ctrl shortcuts.
+  const MAC = config.platform === 'darwin';
   const shellName = (config.shell || '').split(/[\\/]/).pop().replace(/\.exe$/i, '');
   const SH = WIN
     ? {
@@ -117,11 +119,11 @@
   };
   // macOS routes these through the native menu; trigger the same menu handler.
   const shortcut = async (name) => {
-    if (WIN || name === 'tab:next' || name === 'tab:prev') return key(...WIN_KEYS[name]);
+    if (!MAC || name === 'tab:next' || name === 'tab:prev') return key(...WIN_KEYS[name]);
     await invoke('qa_menu', { id: name });
     await sleep(350);
   };
-  const jump = (n) => key(String(n), WIN ? { ctrlKey: true } : { metaKey: true });
+  const jump = (n) => key(String(n), MAC ? { metaKey: true } : { ctrlKey: true });
   const tabEl = (n) => $(`.tab:nth-child(${n})`);
 
   try {
@@ -129,14 +131,14 @@
     await waitFor(() => getComputedStyle($('#boot')).display === 'none', 8000);
     check('boot overlay removed after boot', getComputedStyle($('#boot')).display === 'none');
     const targets = ['#new-tab', '#settings', '.tab .title', '.tab .x', '#terminals'];
-    if (WIN) targets.push('[data-action=minimize]', '[data-action=maximize]', '[data-action=close]');
+    if (!MAC) targets.push('[data-action=minimize]', '[data-action=maximize]', '[data-action=close]');
     for (const sel of targets) {
       const h = hit($(sel));
       check(`clickable: ${sel}`, h.inside && !h.drag, JSON.stringify(h));
     }
     check('title bar background drags the window', $('#titlebar').hasAttribute('data-tauri-drag-region')
       && $('.drag-spacer').hasAttribute('data-tauri-drag-region'));
-    if (!WIN) check('mac: custom window controls hidden', getComputedStyle($('#window-controls')).display === 'none');
+    if (MAC) check('mac: custom window controls hidden', getComputedStyle($('#window-controls')).display === 'none');
 
     // ---- typing ----
     await waitFor(() => buffer().trim().length > 0);
@@ -169,7 +171,7 @@
     await shortcut('tab:prev');
     check('prev tab wraps', tabs.indexOf(active) === 2, S());
     await jump(2);
-    check(`${WIN ? 'Ctrl' : 'Cmd'}+2 jumps to tab 2`, tabs.indexOf(active) === 1, S());
+    check(`${MAC ? 'Cmd' : 'Ctrl'}+2 jumps to tab 2`, tabs.indexOf(active) === 1, S());
     await shortcut('tab:close');
     check('shortcut: close tab', tabs.length === 2, S());
     await jump(1);
@@ -183,7 +185,7 @@
     await shortcut('edit:paste');
     await run('');
     check('paste shortcut', await waitFor(() => /\npasted-55/.test(buffer())));
-    if (WIN) {
+    if (!MAC) {
       check('selection cleared after copy', !active.term.hasSelection());
       await window.eft.copy('echo ctrlv-66');
       active.term.focus();
@@ -214,7 +216,7 @@
       await waitFor(() => /\nafter-int/.test(buffer()), 35000);
     }
     window.eft.write = realWrite;
-    if (WIN) {
+    if (!MAC) {
       active.term.selectAll();
       await window.eft.copy('');
       await key('c', { ctrlKey: true });
@@ -335,6 +337,8 @@
       JSON.stringify({ n: tabs.length, plus: plus.right, gear: gear.left, w: innerWidth }));
 
     // ---- window controls ----
+    // Windows only: Linux CI runs under xvfb with no window manager, so
+    // maximize and minimize never change the window state there.
     if (WIN) {
       await click($('[data-action=maximize]'));
       await sleep(700);

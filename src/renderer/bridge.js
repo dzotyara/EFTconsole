@@ -25,8 +25,13 @@
         else emitData(id, bytes);
       };
       const info = await invoke('pty_spawn', { cols, rows, onData: channel });
-      id = info.id;
-      early.forEach((bytes) => emitData(id, bytes));
+      // Flush after the caller has mapped the id to its tab (it does so right
+      // after this promise resolves); flushing here would drop a fast shell's
+      // first prompt, which is what happens on Linux.
+      setTimeout(() => {
+        id = info.id;
+        early.forEach((bytes) => emitData(id, bytes));
+      }, 0);
       return info;
     },
     write: (id, data) => invoke('pty_write', { id, data }),
